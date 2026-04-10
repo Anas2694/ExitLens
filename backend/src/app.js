@@ -48,6 +48,8 @@ app.use(compression());
 app.use(express.json({ limit: "100kb" }));
 app.use(express.urlencoded({ extended: false, limit: "50kb" }));
 
+app.use(express.text({ type: "text/plain", limit: "100kb" }));
+
 // ── Cookie Parser ─────────────────────────────────────────────────────────────
 app.use(cookieParser());
 
