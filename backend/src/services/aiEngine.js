@@ -78,7 +78,7 @@ Provide your full analysis JSON. Be specific about what page changes would fix e
 }
 
 async function callGemini(prompt) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${config.ai.geminiKey}`;
+const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${config.ai.geminiKey}`;
 
   const body = {
     systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
