@@ -6,9 +6,9 @@ const logger = require("../utils/logger");
 // ── Cookie options ─────────────────────────────────────────────────────────────
 function getCookieOptions() {
   return {
-    httpOnly: true,         // ✅ Not accessible from JS (prevents XSS token theft)
-    secure: config.isProd,  // ✅ HTTPS-only in production
-    sameSite: config.isProd ? "strict" : "lax",
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
     maxAge: config.jwt.cookieMaxAge,
     path: "/",
   };
@@ -105,12 +105,12 @@ async function login(req, res) {
 // ── POST /auth/logout ─────────────────────────────────────────────────────────
 async function logout(req, res) {
   // ✅ Clear cookie server-side — client can't do this for httpOnly cookies
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: config.isProd,
-    sameSite: config.isProd ? "strict" : "lax",
-    path: "/",
-  });
+res.clearCookie("token", {
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+  path: "/",
+});
 
   logger.info("User logged out", { userId: req.userId });
 
