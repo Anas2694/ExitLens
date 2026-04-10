@@ -70,6 +70,9 @@ async function authenticateApiKey(req, res, next) {
 
    if (!apiKey || typeof apiKey !== "string") {
   logger.warn("Track 401 - no apiKey in body", { body: JSON.stringify(req.body).slice(0, 200) });
+  console.log("API KEY RECEIVED:", apiKey);
+  const project = await Project.findByApiKey(apiKey);
+console.log("PROJECT FOUND:", project);
   return res.status(401).json({ success: false, error: "API key required" });
 }
 
