@@ -64,8 +64,10 @@ if (config.isProd) {
 
 // ── Serve tracker script ───────────────────────────────────────────────────────
 app.get("/analytics.js", (req, res) => {
-  res.setHeader("Content-Type", "application/javascript");
+  res.setHeader("Content-Type", "application/javascript; charset=utf-8");
   res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET");
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   res.setHeader("Cache-Control", "public, max-age=3600");
   res.sendFile(path.join(__dirname, "../../tracker/analytics.js"));
 });
