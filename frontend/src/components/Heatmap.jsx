@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 
 export default function Heatmap({ points = [] }) {
+
+console.log("HEATMAP POINTS:", points);
   const canvasRef = useRef(null);
 
   useEffect(() => {
