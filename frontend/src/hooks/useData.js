@@ -64,7 +64,7 @@ export function useStats(params = {}) {
       .then((res) => setStats(res.data.data.stats))
       .catch((err) => setError(err.response?.data?.error || "Failed to load stats"))
       .finally(() => setLoading(false));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); 
 
   return { stats, loading, error };
 }
@@ -112,7 +112,7 @@ export function useInsights(params = {}) {
       .then((res) => setData(res.data.data))
       .catch((err) => setError(err.response?.data?.error || "Failed to load insights"))
       .finally(() => setLoading(false));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); 
 
   return { ...data, loading, error };
 }
