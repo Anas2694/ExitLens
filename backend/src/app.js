@@ -33,25 +33,13 @@ app.use(helmet({
 }));
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-// ✅ SECURITY: Whitelist only — never wildcard * in production
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (server-to-server, curl, mobile apps)
-    if (!origin) return callback(null, true);
-
-    if (config.cors.allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    logger.warn("CORS blocked request", { origin });
-    callback(new Error(`Origin ${origin} not allowed by CORS policy`));
-  },
-  credentials: true,           // required for httpOnly cookies
+  origin: true,
+  credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "X-Api-Key"],
-  maxAge: 86400,               // pre-flight cache 24h
+  maxAge: 86400,
 }));
-
 // ── Compression ───────────────────────────────────────────────────────────────
 app.use(compression());
 
