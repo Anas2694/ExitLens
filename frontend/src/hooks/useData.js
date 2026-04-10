@@ -26,7 +26,7 @@ export function useSessions(params = {}) {
       });
 
     return () => { cancelled = true; };
-  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key]); 
 
   return { ...data, loading, error };
 }
