@@ -20,7 +20,7 @@
 
   const CONFIG = {
     apiKey: script.getAttribute("data-api-key") || "",
-    endpoint: script.getAttribute("data-endpoint") || "https://api.yourdomain.com/track",
+endpoint: script.getAttribute("data-endpoint") || "https://exitlens.onrender.com/track",    
     flushInterval: 10000,   // flush every 10s
     maxBatchSize: 20,        // max events per batch
     maxScrollSamples: 5,     // throttle scroll events
