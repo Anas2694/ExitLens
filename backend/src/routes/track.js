@@ -28,6 +28,6 @@ function validateTrack(req, res, next) {
   next();
 }
 
-router.post("/", trackLimiter, parseBeaconBody, validateTrack, authenticateApiKey, track);
+router.post("/", trackLimiter, parseBeaconBody, authenticateApiKey, validateTrack, track);
 
 module.exports = router;
