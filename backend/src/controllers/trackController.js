@@ -9,18 +9,9 @@ const logger = require("../utils/logger");
 async function track(req, res) {
   try {
     // ── API Key ─────────────────────────────
-    const apiKey = req.get("x-api-key") || req.body.apiKey;
-
-    if (!apiKey) {
-      return res.status(401).json({ error: "API key missing" });
-    }
-
-    // 🔥 FIND USER FROM API KEY
-    const user = await User.findOne({ apiKey });
-
-    if (!user) {
-      return res.status(401).json({ error: "Invalid API key" });
-    }
+   // ✅ Already authenticated in middleware
+const userId = req.userId;
+const projectId = req.projectId;
 
     const {
       sessionId,
@@ -41,8 +32,8 @@ async function track(req, res) {
       {
         $setOnInsert: {
           sessionId,
-          userId: user._id,   // 🔥 FIXED HERE
-          projectId: req.body.projectId || null,
+          userId: req.userId,
+projectId: req.projectId,
           pageUrl,
           referrer,
           userAgent,
