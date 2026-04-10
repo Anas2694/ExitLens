@@ -68,9 +68,10 @@ async function authenticateApiKey(req, res, next) {
   try {
     const apiKey = req.headers["x-api-key"] || (req.body && req.body.apiKey);
 
-    if (!apiKey || typeof apiKey !== "string") {
-      return res.status(401).json({ success: false, error: "API key required" });
-    }
+   if (!apiKey || typeof apiKey !== "string") {
+  logger.warn("Track 401 - no apiKey in body", { body: JSON.stringify(req.body).slice(0, 200) });
+  return res.status(401).json({ success: false, error: "API key required" });
+}
 
     // Project key format: elp_...
     // User key format: el_...
