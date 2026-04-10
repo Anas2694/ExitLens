@@ -18,7 +18,7 @@ export default function SessionDetailPage() {
   useEffect(() => {
     if (!id) return;
 
-    fetch(`http://localhost:4000/sessions/${id}/heatmap`, {
+    fetch(`https://exitlens.onrender.com/sessions/${id}/heatmap`, {
       credentials: "include",
     })
       .then(res => res.json())
