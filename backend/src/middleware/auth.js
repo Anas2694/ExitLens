@@ -68,47 +68,73 @@ async function authenticateApiKey(req, res, next) {
   try {
     const apiKey = req.headers["x-api-key"] || (req.body && req.body.apiKey);
 
-   if (!apiKey || typeof apiKey !== "string") {
-  logger.warn("Track 401 - no apiKey in body", { body: JSON.stringify(req.body).slice(0, 200) });
-  console.log("API KEY RECEIVED:", apiKey);
-  const project = await Project.findByApiKey(apiKey);
-console.log("PROJECT FOUND:", project);
-  return res.status(401).json({ success: false, error: "API key required" });
-}
+    if (!apiKey || typeof apiKey !== "string") {
+      return res.status(401).json({
+        success: false,
+        error: "API key required",
+      });
+    }
 
-    // Project key format: elp_...
-    // User key format: el_...
+    // ── Project API Key (elp_...) ─────────────────────────────
     if (apiKey.startsWith("elp_")) {
-      // Project-scoped key
       if (!/^elp_[a-f0-9]{64}$/.test(apiKey)) {
-        return res.status(401).json({ success: false, error: "Invalid API key format" });
+        return res.status(401).json({
+          success: false,
+          error: "Invalid API key format",
+        });
       }
+
       const Project = require("../models/Project");
-      const project = await Project.findByApiKey(apiKey);
+
+      // 🔥 DEBUG
+      console.log("API KEY RECEIVED:", apiKey);
+
+      const project = await Project.findOne({ apiKey });
+
+      console.log("PROJECT FOUND:", project);
+
       if (!project) {
-        return res.status(401).json({ success: false, error: "Invalid API key" });
+        return res.status(401).json({
+          success: false,
+          error: "Invalid API key",
+        });
       }
+
       req.project = project;
       req.projectId = project._id;
       req.userId = project.userId;
+
       return next();
     }
 
-    // Legacy user-level key
+    // ── User API Key (el_...) ─────────────────────────────
     if (!/^el_[a-f0-9]{64}$/.test(apiKey)) {
-      return res.status(401).json({ success: false, error: "Invalid API key format" });
+      return res.status(401).json({
+        success: false,
+        error: "Invalid API key format",
+      });
     }
+
     const User = require("../models/User");
-    const user = await User.findByApiKey(apiKey);
+    const user = await User.findOne({ apiKey });
+
     if (!user) {
-      return res.status(401).json({ success: false, error: "Invalid API key" });
+      return res.status(401).json({
+        success: false,
+        error: "Invalid API key",
+      });
     }
+
     req.user = user;
     req.userId = user._id;
+
     next();
   } catch (err) {
-    logger.error("API key auth error", { error: err.message });
-    return res.status(500).json({ success: false, error: "Internal authentication error" });
+    console.error("API key auth error:", err);
+    return res.status(500).json({
+      success: false,
+      error: "Internal authentication error",
+    });
   }
 }
 
