@@ -15,10 +15,10 @@ export default function Heatmap({ points = [] }) {
     if (!points.length) return;
 
     points.forEach((p) => {
-      if (p.x == null || p.y == null) return;
+      if (p.xPct == null || p.yPct == null) return;
 
-      const x = (p.x / 100) * canvas.width;
-      const y = (p.y / 100) * canvas.height;
+      const x = (p.xPct / 100) * canvas.width;
+const y = (p.yPct / 100) * canvas.height;
 
       const gradient = ctx.createRadialGradient(x, y, 0, x, y, 40);
       gradient.addColorStop(0, "rgba(255, 80, 80, 0.75)");
