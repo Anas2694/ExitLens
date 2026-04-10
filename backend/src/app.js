@@ -62,6 +62,13 @@ if (config.isProd) {
   app.set("trust proxy", 1);
 }
 
+// ── Serve tracker script ───────────────────────────────────────────────────────
+app.get("/analytics.js", (req, res) => {
+  res.setHeader("Content-Type", "application/javascript");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.sendFile(path.join(__dirname, "../../tracker/analytics.js"));
+});
 // ── Health Check ──────────────────────────────────────────────────────────────
 app.get("/health", (req, res) =>
   res.status(200).json({
