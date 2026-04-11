@@ -10,8 +10,9 @@ console.log("HEATMAP POINTS:", points);
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
+    const rect = canvas.getBoundingClientRect();
+canvas.width = rect.width;
+canvas.height = rect.height;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (!points.length) return;
