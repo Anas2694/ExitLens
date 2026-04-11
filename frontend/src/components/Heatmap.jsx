@@ -21,10 +21,13 @@ canvas.height = height;
     if (!points.length) return;
 
     points.forEach((p) => {
-      if (p.xPct == null || p.yPct == null) return;
+      const xVal = p.xPct ?? p.x;
+const yVal = p.yPct ?? p.y;
 
-      const x = (p.xPct / 100) * width;
-const y = (p.yPct / 100) * height;
+if (xVal == null || yVal == null) return;
+
+const x = (xVal / 100) * width;
+const y = (yVal / 100) * height;
 
       const gradient = ctx.createRadialGradient(x, y, 0, x, y, 40);
       gradient.addColorStop(0, "rgba(255, 80, 80, 0.75)");
