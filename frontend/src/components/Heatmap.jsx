@@ -10,9 +10,12 @@ console.log("HEATMAP POINTS:", points);
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
-    const rect = canvas.getBoundingClientRect();
-canvas.width = rect.width;
-canvas.height = rect.height;
+    const parent = canvas.parentElement;
+const width = parent.clientWidth;
+const height = parent.clientHeight;
+
+canvas.width = width;
+canvas.height = height;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (!points.length) return;
@@ -20,8 +23,8 @@ canvas.height = rect.height;
     points.forEach((p) => {
       if (p.xPct == null || p.yPct == null) return;
 
-      const x = (p.xPct / 100) * canvas.width;
-const y = (p.yPct / 100) * canvas.height;
+      const x = (p.xPct / 100) * width;
+const y = (p.yPct / 100) * height;
 
       const gradient = ctx.createRadialGradient(x, y, 0, x, y, 40);
       gradient.addColorStop(0, "rgba(255, 80, 80, 0.75)");
