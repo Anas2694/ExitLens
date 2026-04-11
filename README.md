@@ -6,7 +6,7 @@ ExitLens tracks visitor behavior (clicks, scroll depth, session time), detects p
 
 Live Demo
 
-- 🚀 **Dashboard:** https://exitlens-frontend.onrender.com  
+- 🚀 **Dashboard:**[https://exitlens-app.onrender.com/]
 
 ---
 
