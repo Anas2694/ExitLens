@@ -78,7 +78,7 @@ export default function ProjectsPage() {
           </p>
           <div style={s.snippet}>
             <code style={{ fontSize: "0.78rem", color: "var(--text-soft)" }}>
-              {`<script src="..." data-api-key="${newKey.key}" data-endpoint="http://localhost:4000/track" async></script>`}
+             {`<script src="https://exitlens.onrender.com/cdn/analytics.js" data-api-key="${newKey.key}" async></script>`}
             </code>
           </div>
           <button className="btn btn-ghost" style={{ marginTop: 12 }} onClick={() => setNewKey(null)}>
