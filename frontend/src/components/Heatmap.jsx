@@ -53,13 +53,23 @@ console.log("HEATMAP POINTS:", points);
   }, 50); // 🔥 IMPORTANT DELAY
 }, [points]);
 
-  if (!points.length) {
-    return (
-      <div style={s.empty}>
-        No click data recorded for this session
-      </div>
-    );
-  }
+  return (
+  <div style={s.wrap}>
+    <div style={s.label}>
+      🔥 Click Heatmap — {points.length} click{points.length !== 1 ? "s" : ""}
+    </div>
+
+    <div style={s.canvasWrap}>
+      <canvas ref={canvasRef} style={s.canvas} />
+
+      {!points.length && (
+        <div style={s.emptyOverlay}>
+          No click data recorded
+        </div>
+      )}
+    </div>
+  </div>
+);
 
   return (
     <div style={s.wrap}>
@@ -109,4 +119,14 @@ const s = {
     fontSize: "0.85rem",
     marginBottom: 20,
   },
+  emptyOverlay: {
+  position: "absolute",
+  inset: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "var(--text-muted)",
+  fontSize: "0.85rem",
+}
 };
+
