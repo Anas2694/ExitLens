@@ -6,40 +6,52 @@ console.log("HEATMAP POINTS:", points);
   const canvasRef = useRef(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  const canvas = canvasRef.current;
+  if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d");
+
+  // 🔥 Delay to ensure layout is ready
+  setTimeout(() => {
     const parent = canvas.parentElement;
-const width = parent.clientWidth;
-const height = parent.clientHeight;
+    const width = parent.offsetWidth;
+    const height = parent.offsetHeight;
 
-canvas.width = width;
-canvas.height = height;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    console.log("Canvas size:", width, height);
 
-    if (!points.length) return;
+    canvas.width = width;
+    canvas.height = height;
+
+    ctx.clearRect(0, 0, width, height);
 
     points.forEach((p) => {
       const xVal = p.xPct ?? p.x;
-const yVal = p.yPct ?? p.y;
+      const yVal = p.yPct ?? p.y;
 
-if (xVal == null || yVal == null) return;
+      if (xVal == null || yVal == null) return;
 
-const x = (xVal / 100) * width;
-const y = (yVal / 100) * height;
+      const x = (xVal / 100) * width;
+      const y = (yVal / 100) * height;
 
-      const gradient = ctx.createRadialGradient(x, y, 0, x, y, 40);
-      gradient.addColorStop(0, "rgba(255, 80, 80, 0.75)");
-      gradient.addColorStop(0.4, "rgba(255, 180, 0, 0.35)");
+      // 🔴 DEBUG DOT (MUST SHOW)
+      ctx.fillStyle = "red";
+      ctx.beginPath();
+      ctx.arc(x, y, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 🔥 Heatmap glow
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, 50);
+      gradient.addColorStop(0, "rgba(255, 80, 80, 0.7)");
+      gradient.addColorStop(0.5, "rgba(255, 180, 0, 0.3)");
       gradient.addColorStop(1, "rgba(255, 0, 0, 0)");
 
       ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.arc(x, y, 40, 0, Math.PI * 2);
+      ctx.arc(x, y, 50, 0, Math.PI * 2);
       ctx.fill();
     });
-  }, [points]);
+  }, 50); // 🔥 IMPORTANT DELAY
+}, [points]);
 
   if (!points.length) {
     return (
