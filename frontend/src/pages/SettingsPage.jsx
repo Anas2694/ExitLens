@@ -23,7 +23,6 @@ export default function SettingsPage() {
   const trackerSnippet = `<script
   src="${API_URL.replace("4000", "cdn")}/analytics.js"
   data-api-key="YOUR_API_KEY"
-  data-endpoint="${API_URL}/track"
   async
 ></script>`;
 
