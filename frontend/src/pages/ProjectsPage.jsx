@@ -9,6 +9,7 @@ const PROJECT_COLORS = [
 ];
 
 export default function ProjectsPage() {
+    console.log("NEW VERSION LOADED"); 
   const [projects, setProjects]   = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState(null);
