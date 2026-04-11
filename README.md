@@ -4,6 +4,10 @@
 
 ExitLens tracks visitor behavior (clicks, scroll depth, session time), detects patterns like rage clicks and bounce sessions, and uses AI to explain what went wrong in language any founder can understand.
 
+Live Demo
+
+- 🚀 **Dashboard:** https://exitlens-frontend.onrender.com  
+
 ---
 
 ## Quick Start
