@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSessions } from "../hooks/useData";
 import { sessionsApi } from "../services/api";
@@ -14,8 +14,9 @@ export default function SessionsPage() {
     deviceType: "",
     referrerDomain: "",
   });
+  const [debouncedFilters, setDebouncedFilters] = useState(filters);
   const [page, setPage] = useState(1);
-  const activeFilters = { ...cleanFilters(filters), page, limit: 20 };
+  const activeFilters = { ...cleanFilters(debouncedFilters), page, limit: 20 };
   const { sessions, pagination, loading, error } = useSessions(activeFilters);
   const hasFilters = Object.values(filters).some(Boolean);
 
@@ -28,6 +29,11 @@ export default function SessionsPage() {
     setFilters({ isBounce: "", from: "", to: "", pageUrl: "", deviceType: "", referrerDomain: "" });
     setPage(1);
   }
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedFilters(filters), 350);
+    return () => clearTimeout(timer);
+  }, [filters]);
 
   return (
     <div>
@@ -54,8 +60,8 @@ export default function SessionsPage() {
           <option value="mobile">Mobile</option>
           <option value="tablet">Tablet</option>
         </select>
-        <input className="form-input" type="date" value={filters.from} onChange={(e) => updateFilter("from", e.target.value)} max={filters.to || undefined} />
-        <input className="form-input" type="date" value={filters.to} onChange={(e) => updateFilter("to", e.target.value)} min={filters.from || undefined} />
+        <DateFilter value={filters.from} placeholder="From DD MM YY" onChange={(value) => updateFilter("from", value)} />
+        <DateFilter value={filters.to} placeholder="To DD MM YY" onChange={(value) => updateFilter("to", value)} />
         <input className="form-input" placeholder="Page URL contains" value={filters.pageUrl} onChange={(e) => updateFilter("pageUrl", e.target.value)} />
         <input className="form-input" placeholder="Referrer domain" value={filters.referrerDomain} onChange={(e) => updateFilter("referrerDomain", e.target.value)} />
         {hasFilters && <button className="btn btn-ghost" onClick={clearFilters}>Clear filters</button>}
@@ -149,6 +155,19 @@ function Flags({ session }) {
 
 function cleanFilters(filters) {
   return Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== ""));
+}
+
+function DateFilter({ value, placeholder, onChange }) {
+  return (
+    <input
+      className="form-input"
+      inputMode="numeric"
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{ maxWidth: 150 }}
+    />
+  );
 }
 
 function safePathname(url) {

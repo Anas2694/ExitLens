@@ -1,20 +1,19 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { useAlerts, usePageHeatmap, useStats, useSessions } from "../hooks/useData";
+import { useAlerts, useStats, useSessions } from "../hooks/useData";
 import { useAuth } from "../hooks/useAuth";
 import { StatCard, Skeleton, ErrorState, PageHeader } from "../components/ui/index.jsx";
 import { formatDuration } from "../utils/format";
 import { sessionsApi } from "../services/api";
-import Heatmap from "../components/Heatmap";
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [filters, setFilters] = useState({ from: "", to: "", pageUrl: "", deviceType: "" });
-  const activeFilters = cleanFilters(filters);
+  const [debouncedFilters, setDebouncedFilters] = useState(filters);
+  const activeFilters = cleanFilters(debouncedFilters);
   const { stats, loading: statsLoading, error: statsError } = useStats(activeFilters);
   const { sessions, loading: sessionsLoading } = useSessions({ ...activeFilters, limit: 5 });
-  const { points, loading: heatmapLoading } = usePageHeatmap(activeFilters);
   const { alerts, loading: alertsLoading } = useAlerts(activeFilters);
 
   const barData = stats ? [
@@ -23,23 +22,29 @@ export default function DashboardPage() {
     { name: "Avg Scroll %", value: stats.avgScrollDepthPct || 0, color: "var(--info)" },
   ] : [];
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedFilters(filters), 350);
+    return () => clearTimeout(timer);
+  }, [filters]);
+
   return (
     <div>
       <PageHeader
         title={`Good day, ${user?.name?.split(" ")[0] || "there"}`}
-        subtitle="Landing page behavior, alerts, heatmaps, and exports"
+        subtitle="Landing page behavior, alerts, filters, and exports"
         action={
           <div style={s.actions}>
             <a className="btn btn-ghost" href={sessionsApi.exportUrl({ ...activeFilters, format: "csv" })}>Sessions CSV</a>
             <a className="btn btn-ghost" href={sessionsApi.exportUrl({ ...activeFilters, format: "pdf" })}>Sessions PDF</a>
             <a className="btn btn-ghost" href={sessionsApi.exportInsightsUrl({ format: "csv" })}>Insights CSV</a>
+            <a className="btn btn-ghost" href={sessionsApi.exportInsightsUrl({ format: "pdf" })}>Insights PDF</a>
           </div>
         }
       />
 
       <div style={s.filterBar}>
-        <input className="form-input" type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} />
-        <input className="form-input" type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} />
+        <DateFilter value={filters.from} placeholder="From DD MM YY" onChange={(value) => setFilters({ ...filters, from: value })} />
+        <DateFilter value={filters.to} placeholder="To DD MM YY" onChange={(value) => setFilters({ ...filters, to: value })} />
         <input className="form-input" placeholder="Filter page URL" value={filters.pageUrl} onChange={(e) => setFilters({ ...filters, pageUrl: e.target.value })} />
         <select className="form-input" value={filters.deviceType} onChange={(e) => setFilters({ ...filters, deviceType: e.target.value })}>
           <option value="">All devices</option>
@@ -124,12 +129,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {heatmapLoading ? (
-        <Skeleton height={360} radius={16} style={{ marginTop: 24 }} />
-      ) : (
-        <Heatmap points={points} title="Aggregated Page Heatmap" subtitle="Clicks grouped across matching sessions" />
-      )}
-
       <div className="card" style={{ marginTop: 24 }}>
         <div style={s.cardHead}>
           <h3 style={s.cardTitle}>Recent Sessions</h3>
@@ -195,6 +194,19 @@ function IssueRow({ label, value, severity }) {
 
 function cleanFilters(filters) {
   return Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== ""));
+}
+
+function DateFilter({ value, placeholder, onChange }) {
+  return (
+    <input
+      className="form-input"
+      inputMode="numeric"
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{ maxWidth: 150 }}
+    />
+  );
 }
 
 function safePathname(url) {

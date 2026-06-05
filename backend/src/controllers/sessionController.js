@@ -113,40 +113,6 @@ async function getHeatmap(req, res) {
   return res.status(200).json({ success: true, data: clicks });
 }
 
-async function getPageHeatmap(req, res) {
-  const filter = { userId: req.userId, isDeleted: false };
-  applySessionFilters(filter, req.query);
-
-  const rows = await Session.aggregate([
-    { $match: filter },
-    { $unwind: "$events" },
-    { $match: { "events.type": "click", "events.xPct": { $ne: null }, "events.yPct": { $ne: null } } },
-    {
-      $group: {
-        _id: {
-          x: { $round: ["$events.xPct", 0] },
-          y: { $round: ["$events.yPct", 0] },
-          pagePath: "$pagePath",
-        },
-        count: { $sum: 1 },
-      },
-    },
-    { $sort: { count: -1 } },
-    { $limit: 500 },
-  ]);
-
-  const points = rows.map((r) => ({
-    x: r._id.x,
-    y: r._id.y,
-    xPct: r._id.x,
-    yPct: r._id.y,
-    pagePath: r._id.pagePath,
-    count: r.count,
-  }));
-
-  return res.status(200).json({ success: true, data: { points } });
-}
-
 async function getReplay(req, res) {
   const { id } = req.params;
   if (!/^[a-f\d]{24}$/i.test(id)) {
@@ -208,13 +174,14 @@ async function exportSessions(req, res) {
 
   if (format === "pdf") {
     const rows = sessions.map((s) => ({
-      Date: new Date(s.createdAt).toLocaleString(),
+      Date: formatDateTime(s.createdAt),
       Page: s.pagePath || s.pageUrl || "/",
       Device: s.deviceType || "unknown",
-      Duration: s.duration || 0,
+      Duration: formatDuration(s.duration),
       Scroll: `${s.maxScrollDepth || 0}%`,
       Clicks: s.totalClicks || 0,
       Bounce: s.patterns?.isBounce ? "Yes" : "No",
+      Conversions: (s.conversions || []).length,
     }));
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", "attachment; filename=exitlens-sessions-report.pdf");
@@ -224,22 +191,22 @@ async function exportSessions(req, res) {
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
   res.setHeader("Content-Disposition", "attachment; filename=exitlens-sessions.csv");
   return res.send(toCsv([
-    ["createdAt", "pagePath", "pageUrl", "deviceType", "referrerDomain", "durationMs", "scrollDepth", "clicks", "bounce", "rageClicks", "deadClicks", "conversions"],
+    ["Date", "Page Path", "Full URL", "Device", "Referrer", "Duration", "Scroll Depth", "Clicks", "Bounce", "Rage Clicks", "Dead Clicks", "Conversions"],
     ...sessions.map((s) => [
-      s.createdAt,
+      formatDateTime(s.createdAt),
       s.pagePath,
       s.pageUrl,
-      s.deviceType,
-      s.referrerDomain,
-      s.duration,
-      s.maxScrollDepth,
+      titleCase(s.deviceType || "unknown"),
+      s.referrerDomain || "-",
+      formatDuration(s.duration),
+      `${s.maxScrollDepth || 0}%`,
       s.totalClicks,
-      !!s.patterns?.isBounce,
-      !!s.patterns?.hasRageClicks,
-      !!s.patterns?.hasDeadClicks,
+      s.patterns?.isBounce ? "Yes" : "No",
+      s.patterns?.hasRageClicks ? "Yes" : "No",
+      s.patterns?.hasDeadClicks ? "Yes" : "No",
       (s.conversions || []).length,
     ]),
-  ]));
+  ], "ExitLens Sessions Export"));
 }
 
 async function exportInsights(req, res) {
@@ -252,10 +219,10 @@ async function exportInsights(req, res) {
 
   if (format === "pdf") {
     const rows = insights.map((i) => ({
-      Date: new Date(i.createdAt).toLocaleString(),
+      Date: formatDateTime(i.createdAt),
       Page: i.sessionId?.pagePath || i.sessionId?.pageUrl || "/",
       Score: i.overallScore,
-      Source: i.source,
+      Source: titleCase(i.source),
       Summary: i.summary,
     }));
     res.setHeader("Content-Type", "application/pdf");
@@ -266,16 +233,16 @@ async function exportInsights(req, res) {
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
   res.setHeader("Content-Disposition", "attachment; filename=exitlens-insights.csv");
   return res.send(toCsv([
-    ["createdAt", "page", "overallScore", "source", "summary", "quickWins"],
+    ["Date", "Page", "Score", "Source", "Summary", "Quick Wins"],
     ...insights.map((i) => [
-      i.createdAt,
+      formatDateTime(i.createdAt),
       i.sessionId?.pagePath || i.sessionId?.pageUrl || "/",
       i.overallScore,
-      i.source,
+      titleCase(i.source),
       i.summary,
       (i.quickWins || []).join(" | "),
     ]),
-  ]));
+  ], "ExitLens AI Insights Export"));
 }
 
 function applySessionFilters(filter, query) {
@@ -283,9 +250,9 @@ function applySessionFilters(filter, query) {
 
   if (from || to) {
     filter.createdAt = filter.createdAt || {};
-    if (from) filter.createdAt.$gte = new Date(from);
+    if (from) filter.createdAt.$gte = parseDateInput(from, false);
     if (to) {
-      const toDate = new Date(to);
+      const toDate = parseDateInput(to, true);
       toDate.setHours(23, 59, 59, 999);
       filter.createdAt.$lte = toDate;
     }
@@ -356,8 +323,13 @@ function buildReplayLabel(event) {
   return "Page viewed";
 }
 
-function toCsv(rows) {
-  return rows.map((row) => row.map((value) => {
+function toCsv(rows, title) {
+  const generated = [
+    [title],
+    [`Generated ${formatDateTime(new Date())}`],
+    [],
+  ];
+  return [...generated, ...rows].map((row) => row.map((value) => {
     const text = value == null ? "" : String(value);
     return `"${text.replace(/"/g, '""')}"`;
   }).join(",")).join("\n");
@@ -369,10 +341,15 @@ function escapeRegex(value) {
 
 function renderSimplePdf(title, rows) {
   const body = rows.length ? rows : [{ Empty: "No data" }];
-  const lines = [title, `Generated: ${new Date().toLocaleString()}`, ""];
+  const lines = [title, `Generated: ${formatDateTime(new Date())}`, `Records shown: ${Math.min(body.length, 35)} of ${body.length}`, ""];
 
-  body.slice(0, 80).forEach((row, index) => {
-    lines.push(`${index + 1}. ${Object.entries(row).map(([key, value]) => `${key}: ${value ?? ""}`).join(" | ")}`.slice(0, 150));
+  body.slice(0, 35).forEach((row, index) => {
+    lines.push(`${index + 1}. ${row.Page || row.Summary || "Record"}`);
+    Object.entries(row).forEach(([key, value]) => {
+      if (key === "Page") return;
+      wrapText(`${key}: ${value ?? ""}`, 96).forEach((line) => lines.push(`   ${line}`));
+    });
+    lines.push("");
   });
 
   const content = [
@@ -414,12 +391,75 @@ function pdfEscape(value) {
   return String(value ?? "").replace(/[\\()]/g, "\\$&").replace(/[^\x20-\x7E]/g, "?");
 }
 
+function wrapText(value, width) {
+  const words = String(value ?? "").split(/\s+/);
+  const lines = [];
+  let line = "";
+
+  words.forEach((word) => {
+    const next = line ? `${line} ${word}` : word;
+    if (next.length > width) {
+      if (line) lines.push(line);
+      line = word;
+    } else {
+      line = next;
+    }
+  });
+
+  if (line) lines.push(line);
+  return lines.length ? lines : [""];
+}
+
+function parseDateInput(value, endOfDay) {
+  if (!value) return null;
+  const text = String(value).trim();
+  const dmy = text.match(/^(\d{1,2})[./\-\s](\d{1,2})[./\-\s](\d{2}|\d{4})$/);
+  let date;
+
+  if (dmy) {
+    const day = Number(dmy[1]);
+    const month = Number(dmy[2]) - 1;
+    const year = Number(dmy[3].length === 2 ? `20${dmy[3]}` : dmy[3]);
+    date = new Date(year, month, day);
+  } else {
+    date = new Date(text);
+  }
+
+  if (Number.isNaN(date.getTime())) return endOfDay ? new Date(8640000000000000) : new Date(0);
+  if (endOfDay) date.setHours(23, 59, 59, 999);
+  else date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function formatDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+}
+
+function formatDuration(ms = 0) {
+  const totalSeconds = Math.round(Number(ms || 0) / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return minutes ? `${minutes}m ${seconds}s` : `${seconds}s`;
+}
+
+function titleCase(value) {
+  return String(value || "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+}
+
 module.exports = {
   listSessions,
   getSession,
   getStats,
   getHeatmap,
-  getPageHeatmap,
   getReplay,
   getAlerts,
   exportSessions,

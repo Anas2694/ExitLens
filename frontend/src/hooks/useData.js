@@ -72,25 +72,6 @@ export function useStats(params = {}) {
   return { stats, loading, error };
 }
 
-export function usePageHeatmap(params = {}) {
-  const [points, setPoints] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const key = JSON.stringify(params);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    sessionsApi.heatmap(params)
-      .then((res) => { if (!cancelled) setPoints(res.data.data.points || []); })
-      .catch((err) => { if (!cancelled) setError(err.response?.data?.error || "Failed to load heatmap"); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [key]);
-
-  return { points, loading, error };
-}
-
 export function useAlerts(params = {}) {
   const [data, setData] = useState({ alerts: [], current: {}, previous: {} });
   const [loading, setLoading] = useState(true);

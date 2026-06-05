@@ -10,7 +10,6 @@ router.use(apiLimiter);
 
 router.get("/", validate(schemas.sessionQuery, "query"), sessionController.listSessions);
 router.get("/stats", validate(schemas.sessionQuery, "query"), sessionController.getStats);
-router.get("/heatmap", validate(schemas.sessionQuery, "query"), sessionController.getPageHeatmap);
 router.get("/alerts", validate(schemas.sessionQuery, "query"), sessionController.getAlerts);
 router.get("/export", validate(schemas.sessionQuery, "query"), sessionController.exportSessions);
 router.get("/export-insights", sessionController.exportInsights);

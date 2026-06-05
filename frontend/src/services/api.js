@@ -35,7 +35,6 @@ export const sessionsApi = {
   list: (params) => api.get("/sessions", { params }),
   get: (id) => api.get(`/sessions/${id}`),
   stats: (params) => api.get("/sessions/stats", { params }),
-  heatmap: (params) => api.get("/sessions/heatmap", { params }),
   sessionHeatmap: (id) => api.get(`/sessions/${id}/heatmap`),
   replay: (id) => api.get(`/sessions/${id}/replay`),
   alerts: (params) => api.get("/sessions/alerts", { params }),

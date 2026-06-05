@@ -54,8 +54,8 @@ const trackSchema = Joi.object({
 const sessionQuerySchema = Joi.object({
   page: Joi.number().integer().min(1).max(1000).default(1),
   limit: Joi.number().integer().min(1).max(100).default(20),
-  from: Joi.string().isoDate(),
-  to: Joi.string().isoDate(),
+  from: Joi.string().max(20),
+  to: Joi.string().max(20),
   minDuration: Joi.number().min(0),
   maxScrollDepth: Joi.number().min(0).max(100),
   isBounce: Joi.boolean(),
