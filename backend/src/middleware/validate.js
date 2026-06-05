@@ -41,6 +41,7 @@ const eventSchema = Joi.object({
   isInteractive: Joi.boolean(),
   duration: Joi.number().min(0).max(86400000), // max 24 hours
   exitPage: safeString(200),
+  customName: safeString(80),
   properties: Joi.object().max(20), // custom event properties
 }).options({ stripUnknown: true }); // ✅ strip extra fields silently
 
@@ -58,6 +59,13 @@ const sessionQuerySchema = Joi.object({
   minDuration: Joi.number().min(0),
   maxScrollDepth: Joi.number().min(0).max(100),
   isBounce: Joi.boolean(),
+  projectId: objectId,
+  pageUrl: Joi.string().max(500),
+  pagePath: Joi.string().max(300),
+  deviceType: Joi.string().valid("desktop", "tablet", "mobile", "unknown"),
+  referrer: Joi.string().max(500),
+  referrerDomain: Joi.string().max(253),
+  format: Joi.string().valid("csv", "pdf"),
 });
 
 // ── Middleware factory ────────────────────────────────────────────────────────

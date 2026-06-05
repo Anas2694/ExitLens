@@ -9,7 +9,6 @@ const PROJECT_COLORS = [
 ];
 
 export default function ProjectsPage() {
-    console.log("NEW VERSION LOADED"); 
   const [projects, setProjects]   = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState(null);
@@ -174,6 +173,8 @@ export default function ProjectsPage() {
 function ProjectCard({ project, onDelete, onReload }) {
   const [regenKey, setRegenKey] = useState(null);
   const [stats, setStats]       = useState(null);
+  const [goal, setGoal]         = useState({ name: "", type: "click", value: "" });
+  const [goalError, setGoalError] = useState("");
 
   useEffect(() => {
     projectsApi.stats(project._id)
@@ -185,6 +186,27 @@ function ProjectCard({ project, onDelete, onReload }) {
     if (!window.confirm("Regenerate API key? Your current tracker script will stop working.")) return;
     const res = await projectsApi.regenerateKey(project._id);
     setRegenKey(res.data.data.apiKey);
+  }
+
+  async function handleAddGoal(e) {
+    e.preventDefault();
+    if (!goal.name.trim() || !goal.value.trim()) {
+      setGoalError("Goal name and match value are required");
+      return;
+    }
+    try {
+      await projectsApi.addGoal(project._id, goal);
+      setGoal({ name: "", type: "click", value: "" });
+      setGoalError("");
+      onReload();
+    } catch (err) {
+      setGoalError(err.response?.data?.error || "Failed to add goal");
+    }
+  }
+
+  async function handleDeleteGoal(goalId) {
+    await projectsApi.deleteGoal(project._id, goalId).catch(() => {});
+    onReload();
   }
 
   return (
@@ -239,6 +261,33 @@ function ProjectCard({ project, onDelete, onReload }) {
         </div>
       )}
 
+      <div style={s.goalBox}>
+        <h4 style={s.goalTitle}>Conversion Goals</h4>
+        {project.conversionGoals?.length ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
+            {project.conversionGoals.map((item) => (
+              <div key={item._id} style={s.goalRow}>
+                <span>{item.name} <small>({item.type}: {item.value})</small></span>
+                <button className="btn btn-ghost" style={s.goalDelete} onClick={() => handleDeleteGoal(item._id)}>Remove</button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p style={s.goalHint}>No goals yet.</p>
+        )}
+        <form onSubmit={handleAddGoal} style={s.goalForm}>
+          <input className="form-input" placeholder="Goal name" value={goal.name} onChange={(e) => setGoal({ ...goal, name: e.target.value })} />
+          <select className="form-input" value={goal.type} onChange={(e) => setGoal({ ...goal, type: e.target.value })}>
+            <option value="click">Click contains</option>
+            <option value="page_visit">Page visit</option>
+            <option value="custom_event">Custom event</option>
+          </select>
+          <input className="form-input" placeholder="Match value" value={goal.value} onChange={(e) => setGoal({ ...goal, value: e.target.value })} />
+          <button className="btn btn-primary" type="submit">Add</button>
+        </form>
+        {goalError && <p className="form-error">{goalError}</p>}
+      </div>
+
       <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
         <Link
           to={`/app/sessions?projectId=${project._id}`}
@@ -287,5 +336,37 @@ const s = {
     background: "var(--bg-card)", border: "1px solid var(--border)",
     borderRadius: "var(--radius)", padding: "10px 14px",
     marginTop: 8, wordBreak: "break-all",
+  },
+  goalBox: {
+    borderTop: "1px solid var(--border)",
+    paddingTop: 12,
+    marginTop: 12,
+  },
+  goalTitle: {
+    fontSize: "0.85rem",
+    color: "var(--text-soft)",
+    marginBottom: 10,
+  },
+  goalHint: {
+    color: "var(--text-muted)",
+    fontSize: "0.8rem",
+    marginBottom: 10,
+  },
+  goalRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 8,
+    alignItems: "center",
+    color: "var(--text-soft)",
+    fontSize: "0.8rem",
+  },
+  goalDelete: {
+    padding: "3px 8px",
+    fontSize: "0.72rem",
+  },
+  goalForm: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 8,
   },
 };

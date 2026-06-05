@@ -8,9 +8,14 @@ const { validate, schemas } = require("../middleware/validate");
 router.use(authenticate);
 router.use(apiLimiter);
 
-router.get("/",           validate(schemas.sessionQuery, "query"), sessionController.listSessions);
-router.get("/stats",      sessionController.getStats);
-router.get("/:id/heatmap", sessionController.getHeatmap);   // ← ADD THIS
-router.get("/:id",        sessionController.getSession);
+router.get("/", validate(schemas.sessionQuery, "query"), sessionController.listSessions);
+router.get("/stats", validate(schemas.sessionQuery, "query"), sessionController.getStats);
+router.get("/heatmap", validate(schemas.sessionQuery, "query"), sessionController.getPageHeatmap);
+router.get("/alerts", validate(schemas.sessionQuery, "query"), sessionController.getAlerts);
+router.get("/export", validate(schemas.sessionQuery, "query"), sessionController.exportSessions);
+router.get("/export-insights", sessionController.exportInsights);
+router.get("/:id/replay", sessionController.getReplay);
+router.get("/:id/heatmap", sessionController.getHeatmap);
+router.get("/:id", sessionController.getSession);
 
 module.exports = router;

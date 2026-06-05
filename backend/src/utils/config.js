@@ -32,7 +32,7 @@ const config = {
   },
 
   cors: {
-    allowedOrigins: (process.env.ALLOWED_ORIGINS || "http://localhost:3000")
+    allowedOrigins: (process.env.ALLOWED_ORIGINS || "http://localhost:3000,https://exitlens-app.onrender.com")
       .split(",")
       .map((o) => o.trim()),
   },

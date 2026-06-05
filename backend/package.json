@@ -34,7 +34,7 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "setupFilesAfterFramework": [],
+    "setupFilesAfterEnv": [],
     "testMatch": ["**/tests/**/*.test.js"],
     "collectCoverageFrom": ["src/**/*.js"]
   },

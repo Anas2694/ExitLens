@@ -3,14 +3,8 @@ const config = require("../utils/config");
 const User = require("../models/User");
 const logger = require("../utils/logger");
 
-/**
- * Middleware: verify JWT from httpOnly cookie.
- * ✅ SECURITY: JWT is stored in httpOnly cookie, NOT localStorage.
- * This prevents XSS attacks from stealing tokens.
- */
 async function authenticate(req, res, next) {
   try {
-    // ✅ Read from httpOnly cookie, never from Authorization header for web clients
     const token = req.cookies && req.cookies.token;
 
     if (!token) {
@@ -24,7 +18,6 @@ async function authenticate(req, res, next) {
     try {
       decoded = jwt.verify(token, config.jwt.secret);
     } catch (err) {
-      // ✅ SECURITY: distinguish expired vs invalid without leaking details
       if (err.name === "TokenExpiredError") {
         return res.status(401).json({
           success: false,
@@ -38,7 +31,6 @@ async function authenticate(req, res, next) {
       });
     }
 
-    // ✅ Verify user still exists and is active (handles deleted accounts)
     const user = await User.findById(decoded.sub).select("-password -apiKey");
     if (!user || !user.isActive) {
       return res.status(401).json({
@@ -47,9 +39,8 @@ async function authenticate(req, res, next) {
       });
     }
 
-    // Attach user to request for downstream use
     req.user = user;
-    req.userId = user._id; // convenience shorthand
+    req.userId = user._id;
     next();
   } catch (err) {
     logger.error("Auth middleware error", { error: err.message });
@@ -60,10 +51,6 @@ async function authenticate(req, res, next) {
   }
 }
 
-/**
- * Middleware: verify API key for tracker script endpoint.
- * API keys use a separate auth flow from JWTs.
- */
 async function authenticateApiKey(req, res, next) {
   try {
     const apiKey = req.headers["x-api-key"] || (req.body && req.body.apiKey);
@@ -75,7 +62,6 @@ async function authenticateApiKey(req, res, next) {
       });
     }
 
-    // ── Project API Key (elp_...) ─────────────────────────────
     if (apiKey.startsWith("elp_")) {
       if (!/^elp_[a-f0-9]{64}$/.test(apiKey)) {
         return res.status(401).json({
@@ -85,13 +71,11 @@ async function authenticateApiKey(req, res, next) {
       }
 
       const Project = require("../models/Project");
-
-      // 🔥 DEBUG
-      console.log("API KEY RECEIVED:", apiKey);
-
-      const project = await Project.findOne({ apiKey });
-
-      console.log("PROJECT FOUND:", project);
+      const project = await Project.findOne({
+        apiKey,
+        isActive: true,
+        isDeleted: false,
+      });
 
       if (!project) {
         return res.status(401).json({
@@ -103,11 +87,9 @@ async function authenticateApiKey(req, res, next) {
       req.project = project;
       req.projectId = project._id;
       req.userId = project.userId;
-
       return next();
     }
 
-    // ── User API Key (el_...) ─────────────────────────────
     if (!/^el_[a-f0-9]{64}$/.test(apiKey)) {
       return res.status(401).json({
         success: false,
@@ -115,9 +97,7 @@ async function authenticateApiKey(req, res, next) {
       });
     }
 
-    const User = require("../models/User");
-    const user = await User.findOne({ apiKey });
-
+    const user = await User.findOne({ apiKey, isActive: true });
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -127,10 +107,9 @@ async function authenticateApiKey(req, res, next) {
 
     req.user = user;
     req.userId = user._id;
-
     next();
   } catch (err) {
-    console.error("API key auth error:", err);
+    logger.error("API key auth error", { error: err.message });
     return res.status(500).json({
       success: false,
       error: "Internal authentication error",

@@ -60,7 +60,7 @@ async function getProject(req, res) {
 
 // PUT /projects/:id
 async function updateProject(req, res) {
-  const { name, domain, description, color } = req.body;
+  const { name, domain, description, color, alertSettings, privacy } = req.body;
 
   const project = await Project.findOne({
     _id: req.params.id,
@@ -76,6 +76,18 @@ async function updateProject(req, res) {
   if (domain !== undefined) project.domain = domain.trim().slice(0, 253);
   if (description !== undefined) project.description = description.trim().slice(0, 300);
   if (color) project.color = color;
+  if (alertSettings && typeof alertSettings === "object") {
+    project.alertSettings = {
+      ...toPlain(project.alertSettings),
+      ...sanitizeAlertSettings(alertSettings),
+    };
+  }
+  if (privacy && typeof privacy === "object") {
+    project.privacy = {
+      ...toPlain(project.privacy),
+      ...sanitizePrivacy(privacy),
+    };
+  }
 
   await project.save();
 
@@ -195,10 +207,45 @@ async function addGoal(req, res) {
     return res.status(404).json({ success: false, error: "Project not found" });
   }
 
-  project.conversionGoals.push({ name, type, value });
+  project.conversionGoals.push({
+    name: name.trim().slice(0, 100),
+    type,
+    value: value.trim().slice(0, 200),
+  });
   await project.save();
 
   return res.status(201).json({ success: true, data: { project } });
+}
+
+function sanitizeAlertSettings(settings) {
+  const clean = {};
+  if (typeof settings.enabled === "boolean") clean.enabled = settings.enabled;
+  if (settings.bounceRateThreshold !== undefined) clean.bounceRateThreshold = clamp(settings.bounceRateThreshold, 0, 100);
+  if (settings.rageClickThreshold !== undefined) clean.rageClickThreshold = clamp(settings.rageClickThreshold, 0, 100000);
+  if (settings.deadClickThreshold !== undefined) clean.deadClickThreshold = clamp(settings.deadClickThreshold, 0, 100000);
+  if (settings.comparisonWindowDays !== undefined) clean.comparisonWindowDays = clamp(settings.comparisonWindowDays, 1, 90);
+  return clean;
+}
+
+function sanitizePrivacy(privacy) {
+  const clean = {};
+  if (typeof privacy.anonymizeIp === "boolean") clean.anonymizeIp = privacy.anonymizeIp;
+  if (["off", "required"].includes(privacy.consentMode)) clean.consentMode = privacy.consentMode;
+  if (privacy.retentionDays !== undefined) clean.retentionDays = clamp(privacy.retentionDays, 7, 365);
+  if (typeof privacy.collectElementText === "boolean") clean.collectElementText = privacy.collectElementText;
+  return clean;
+}
+
+function clamp(value, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return min;
+  return Math.max(min, Math.min(max, number));
+}
+
+function toPlain(value) {
+  if (!value) return {};
+  if (typeof value.toObject === "function") return value.toObject();
+  return value;
 }
 
 // DELETE /projects/:id/goals/:goalId

@@ -43,6 +43,23 @@ const projectSchema = new mongoose.Schema(
         createdAt: { type: Date, default: Date.now },
       },
     ],
+    alertSettings: {
+      enabled: { type: Boolean, default: true },
+      bounceRateThreshold: { type: Number, default: 60, min: 0, max: 100 },
+      rageClickThreshold: { type: Number, default: 5, min: 0 },
+      deadClickThreshold: { type: Number, default: 10, min: 0 },
+      comparisonWindowDays: { type: Number, default: 7, min: 1, max: 90 },
+    },
+    privacy: {
+      anonymizeIp: { type: Boolean, default: true },
+      consentMode: {
+        type: String,
+        enum: ["off", "required"],
+        default: "off",
+      },
+      retentionDays: { type: Number, default: 90, min: 7, max: 365 },
+      collectElementText: { type: Boolean, default: true },
+    },
     isActive: { type: Boolean, default: true },
     isDeleted: { type: Boolean, default: false },
     color: {

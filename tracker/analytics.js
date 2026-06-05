@@ -20,15 +20,31 @@
 
   const CONFIG = {
     apiKey: script.getAttribute("data-api-key") || "",
-endpoint: script.getAttribute( "https://exitlens.onrender.com/track",    
+    endpoint: script.getAttribute("data-endpoint") || "https://exitlens.onrender.com/track",
     flushInterval: 10000,   // flush every 10s
     maxBatchSize: 20,        // max events per batch
     maxScrollSamples: 5,     // throttle scroll events
     sessionTimeout: 30 * 60 * 1000, // 30 min inactivity = new session
+    consentRequired: script.getAttribute("data-consent") === "required",
   };
 
   if (!CONFIG.apiKey) {
     console.warn("[ExitLens] No data-api-key found. Tracking disabled.");
+    return;
+  }
+
+  if (CONFIG.consentRequired && localStorage.getItem("exitlens_consent") !== "granted") {
+    window.ExitLens = {
+      grantConsent: function () {
+        localStorage.setItem("exitlens_consent", "granted");
+        window.location.reload();
+      },
+      revokeConsent: function () {
+        localStorage.setItem("exitlens_consent", "denied");
+      },
+      track: function () {},
+      flush: function () {},
+    };
     return;
   }
 
@@ -127,6 +143,9 @@ endpoint: script.getAttribute( "https://exitlens.onrender.com/track",
       userAgent: sanitizeString(navigator.userAgent, 200),
       screenWidth: window.screen.width,
       screenHeight: window.screen.height,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      language: sanitizeString(navigator.language || "", 30),
       duration: Date.now() - SESSION_START,
       maxScrollDepth,
       events: batch,
@@ -261,8 +280,13 @@ endpoint: script.getAttribute( "https://exitlens.onrender.com/track",
   window.ExitLens = {
     track: function (eventName, properties) {
       if (typeof eventName !== "string") return;
-      pushEvent("custom_" + sanitizeString(eventName, 40), properties || {});
+      pushEvent("custom_" + sanitizeString(eventName, 40), {
+        customName: sanitizeString(eventName, 80),
+        properties: properties || {},
+      });
     },
     flush: function () { flush(false); },
+    grantConsent: function () { localStorage.setItem("exitlens_consent", "granted"); },
+    revokeConsent: function () { localStorage.setItem("exitlens_consent", "denied"); },
   };
 })(window, document);

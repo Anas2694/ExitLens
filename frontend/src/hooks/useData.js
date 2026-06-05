@@ -59,14 +59,74 @@ export function useStats(params = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const key = JSON.stringify(params);
+
   useEffect(() => {
+    setLoading(true);
     sessionsApi.stats(params)
       .then((res) => setStats(res.data.data.stats))
       .catch((err) => setError(err.response?.data?.error || "Failed to load stats"))
       .finally(() => setLoading(false));
-  }, []); 
+  }, [key]);
 
   return { stats, loading, error };
+}
+
+export function usePageHeatmap(params = {}) {
+  const [points, setPoints] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const key = JSON.stringify(params);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    sessionsApi.heatmap(params)
+      .then((res) => { if (!cancelled) setPoints(res.data.data.points || []); })
+      .catch((err) => { if (!cancelled) setError(err.response?.data?.error || "Failed to load heatmap"); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [key]);
+
+  return { points, loading, error };
+}
+
+export function useAlerts(params = {}) {
+  const [data, setData] = useState({ alerts: [], current: {}, previous: {} });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const key = JSON.stringify(params);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    sessionsApi.alerts(params)
+      .then((res) => { if (!cancelled) setData(res.data.data); })
+      .catch((err) => { if (!cancelled) setError(err.response?.data?.error || "Failed to load alerts"); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [key]);
+
+  return { ...data, loading, error };
+}
+
+export function useReplay(sessionId) {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    setLoading(true);
+    sessionsApi.replay(sessionId)
+      .then((res) => { if (!cancelled) setEvents(res.data.data.events || []); })
+      .catch((err) => { if (!cancelled) setError(err.response?.data?.error || "Failed to load replay"); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [sessionId]);
+
+  return { events, loading, error };
 }
 
 // ── useInsight ────────────────────────────────────────────────────────────────
@@ -107,12 +167,15 @@ export function useInsights(params = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const key = JSON.stringify(params);
+
   useEffect(() => {
+    setLoading(true);
     insightsApi.list(params)
       .then((res) => setData(res.data.data))
       .catch((err) => setError(err.response?.data?.error || "Failed to load insights"))
       .finally(() => setLoading(false));
-  }, []); 
+  }, [key]);
 
   return { ...data, loading, error };
 }

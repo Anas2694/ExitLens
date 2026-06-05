@@ -28,6 +28,7 @@ const eventSchema = new mongoose.Schema(
     isInteractive: Boolean,
     duration: { type: Number, min: 0 },
     exitPage: { type: String, maxlength: 200 },
+    customName: { type: String, maxlength: 80 },
     // For custom events
     properties: { type: Map, of: mongoose.Schema.Types.Mixed },
   },
@@ -70,17 +71,25 @@ const sessionSchema = new mongoose.Schema(
     sessionId: {
       type: String,
       required: true,
-      unique: true,
       maxlength: 64,
     },
     // The site/domain this session was tracked on
     pageUrl: { type: String, maxlength: 500 },
+    pagePath: { type: String, maxlength: 300, index: true },
     referrer: { type: String, maxlength: 500 },
+    referrerDomain: { type: String, maxlength: 253, index: true },
     exitPage: { type: String, maxlength: 200 },
     // Device info
     userAgent: { type: String, maxlength: 300 },
+    deviceType: { type: String, enum: ["desktop", "tablet", "mobile", "unknown"], default: "unknown", index: true },
+    browser: { type: String, maxlength: 80 },
+    os: { type: String, maxlength: 80 },
+    language: { type: String, maxlength: 30 },
     screenWidth: { type: Number, min: 0, max: 10000 },
     screenHeight: { type: Number, min: 0, max: 10000 },
+    viewportWidth: { type: Number, min: 0, max: 10000 },
+    viewportHeight: { type: Number, min: 0, max: 10000 },
+    ipHash: { type: String, maxlength: 128, select: false },
     // Core metrics
     duration: { type: Number, default: 0, min: 0 },        // ms
     maxScrollDepth: { type: Number, default: 0, min: 0, max: 100 }, // %
@@ -127,10 +136,12 @@ const sessionSchema = new mongoose.Schema(
 // ── Compound indexes for fast tenant-scoped queries ───────────────────────────
 sessionSchema.index({ userId: 1, createdAt: -1 });
 sessionSchema.index({ userId: 1, isDeleted: 1, createdAt: -1 });
-sessionSchema.index({ sessionId: 1 }, { unique: true });
+sessionSchema.index({ projectId: 1, sessionId: 1 }, { unique: true });
+sessionSchema.index({ userId: 1, projectId: 1, createdAt: -1 });
+sessionSchema.index({ userId: 1, pagePath: 1, createdAt: -1 });
 
 // ── TTL: auto-delete sessions older than 90 days ──────────────────────────────
-sessionSchema.index({ createdAt: 1 }, { expireAfterSeconds: 7776000 });
+sessionSchema.index({ createdAt: 1 }, { expireAfterSeconds: 31536000 });
 
 const Session = mongoose.model("Session", sessionSchema);
 module.exports = Session;
