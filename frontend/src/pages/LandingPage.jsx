@@ -1,18 +1,73 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useScroll, useSpring, useTransform } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import "./LandingPage.css";
+
+const HERO_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260307_083826_e938b29f-a43a-41ec-a153-3d4730578ab8.mp4";
+
+const WORKFLOW = [
+  { number: "01", title: "Capture", copy: "One script records clicks, scroll depth, exits, routes, and conversions without slowing the page." },
+  { number: "02", title: "Detect", copy: "The pattern engine identifies bounce, low engagement, rage clicks, and dead clicks across sessions." },
+  { number: "03", title: "Explain", copy: "AI turns the behavior into a plain-English cause, impact, and the exact change to make next." },
+];
 
 export default function LandingPage() {
   const { login, register } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState("login"); // "login" | "register"
+  const heroRef = useRef(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [apiKey, setApiKey] = useState(null);
+  const [authOpen, setAuthOpen] = useState(false);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  const { scrollYProgress: pageScrollProgress } = useScroll();
+  const pageProgress = useSpring(pageScrollProgress, { stiffness: 120, damping: 24, mass: 0.25 });
+  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
+  const heroY = useTransform(scrollYProgress, [0, 0.5], [0, -190]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.47], [1, 0]);
+
+  useEffect(() => {
+    if (!authOpen) return undefined;
+    const onKeyDown = (event) => event.key === "Escape" && setAuthOpen(false);
+    document.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [authOpen]);
+
+  function openAuth(nextMode) {
+    setMode(nextMode);
+    setError("");
+    setForm({ name: "", email: "", password: "" });
+    setMenuOpen(false);
+    setAuthOpen(true);
+  }
+
+  function switchAuthMode(nextMode) {
+    setMode(nextMode);
+    setError("");
+    setForm({ name: "", email: "", password: "" });
+  }
+
+  function scrollTo(id) {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    setMenuOpen(false);
+  }
+
+  function moveHeroLight(event) {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.style.setProperty("--mx", `${event.clientX - bounds.left}px`);
+    event.currentTarget.style.setProperty("--my", `${event.clientY - bounds.top}px`);
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
     setError("");
     setLoading(true);
     try {
@@ -20,12 +75,16 @@ export default function LandingPage() {
         await login(form.email, form.password);
         navigate("/app/dashboard");
       } else {
-        if (form.password.length < 8) { setError("Password must be 8+ characters"); setLoading(false); return; }
-        const res = await register(form.name, form.email, form.password);
-        setApiKey(res.data.apiKey);
+        if (form.password.length < 8) {
+          setError("Password must be at least 8 characters");
+          return;
+        }
+        const response = await register(form.name, form.email, form.password);
+        setApiKey(response.data.apiKey);
+        setAuthOpen(false);
       }
-    } catch (err) {
-      setError(err.response?.data?.error || "Something went wrong");
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -33,356 +92,165 @@ export default function LandingPage() {
 
   if (apiKey) {
     return (
-      <div style={s.page}>
-        <div style={s.apiKeyCard}>
-          <div style={s.dot} />
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", marginBottom: 8 }}>
-            🎉 Account Created!
-          </h2>
-          <p style={{ color: "var(--text-muted)", marginBottom: 20, fontSize: "0.9rem" }}>
-            Save your API key — <strong style={{ color: "var(--warning)" }}>shown only once.</strong>
-          </p>
-          <div style={s.keyBox}><code style={s.keyText}>{apiKey}</code></div>
-          <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", marginTop: 20 }}
-            onClick={() => navigate("/app/dashboard")}>
-            Go to Dashboard →
-          </button>
-        </div>
+      <div className="ny-page ny-success-page">
+        <section className="ny-success-card">
+          <Brand />
+          <span className="ny-success-pulse" aria-hidden="true" />
+          <p className="ny-kicker">Workspace created</p>
+          <h1>Your tracking lens is ready.</h1>
+          <p>Save this API key now. It will only be displayed once.</p>
+          <div className="ny-key-box"><code>{apiKey}</code></div>
+          <button className="ny-primary ny-wide" onClick={() => navigate("/app/dashboard")}>Open dashboard <span>↗</span></button>
+        </section>
       </div>
     );
   }
 
   return (
-    <div style={s.page}>
-      {/* Background glow effects */}
-      <div style={s.glowTop} />
-      <div style={s.glowBottom} />
-
-      {/* Nav */}
-      <nav style={s.nav}>
-        <div style={s.navLogo}>
-          <span style={s.dot} />
-          <span style={s.logoText}>ExitLens</span>
+    <div className="ny-page" id="top">
+      <motion.div className="ny-page-progress" style={{ scaleX: pageProgress }} aria-hidden="true" />
+      <header className="ny-navbar">
+        <div className="ny-nav-left">
+          <a href="#top" className="ny-logo-link" aria-label="ExitLens home"><Brand /></a>
+          <nav className="ny-desktop-nav" aria-label="Landing page navigation">
+            <button type="button" onClick={() => scrollTo("overview")}>Overview</button>
+            <button type="button" onClick={() => scrollTo("workflow")}>How it works <span>⌄</span></button>
+            <button type="button" onClick={() => scrollTo("principle")}>Why ExitLens</button>
+          </nav>
         </div>
-        <div style={s.navLinks}>
-          <a href="#features" style={s.navLink}>Features</a>
-          <a href="#how" style={s.navLink}>How it works</a>
+        <div className="ny-nav-actions">
+          <button className="ny-signin" type="button" onClick={() => openAuth("login")}>Sign in</button>
+          <button className={`ny-menu-button ${menuOpen ? "open" : ""}`} type="button" aria-label="Toggle navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><i /><i /></button>
         </div>
-      </nav>
-
-      {/* Main grid — hero left, auth right */}
-      <div style={s.grid}>
-
-        {/* LEFT — Hero */}
-        <div style={s.hero}>
-          <div style={s.heroBadge}>✦ AI-Powered Analytics</div>
-          <h1 style={s.heroTitle}>
-            
-            Know exactly why users <span style={s.heroAccent}>leave</span> your landing page
-          </h1>
-          <p style={s.heroSubtitle}>
-            ExitLens tracks clicks, scroll depth, and session behavior — then uses AI to explain
-            what's blocking your conversions in plain English.
-          </p>
-
-          {/* Stats row */}
-          <div style={s.statsRow}>
-            <Stat value="< 3KB" label="Tracker size" />
-            <Stat value="Real-time" label="Pattern detection" />
-            <Stat value="AI" label="Plain English insights" />
-          </div>
-
-{/* Features */}
-<div style={s.features} id="features">
-  {FEATURES.map((f, i) => (
-    <div key={i} className="feature-item" style={s.featureItem}>
-      <span style={s.featureIcon}>{f.icon}</span>
-      <div>
-        <div style={s.featureTitle}>{f.title}</div>
-        <div style={s.featureDesc}>{f.desc}</div>
-      </div>
-    </div>
-  ))}
-</div>
-</div>
-
-        {/* RIGHT — Auth card */}
-        <div style={s.authCard}>
-          {/* Tabs */}
-          <div style={s.tabs}>
-            <button
-              style={{ ...s.tab, ...(mode === "login" ? s.tabActive : {}) }}
-              onClick={() => { setMode("login"); setError(""); }}
-            >
-              Sign In
-            </button>
-            <button
-              style={{ ...s.tab, ...(mode === "register" ? s.tabActive : {}) }}
-              onClick={() => { setMode("register"); setError(""); }}
-            >
-              Create Account
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} style={s.form} autoComplete="off">
-            {mode === "register" && (
-              <div className="form-group">
-                <label className="form-label">Full Name</label>
-                <input className="form-input" type="text" placeholder="Ada Lovelace"
-                  value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                  required minLength={2} />
-              </div>
-            )}
-            <div className="form-group">
-              <label className="form-label">Email</label>
-              <input
-  className="form-input"
-  type="email"
-  name="random-email"
-  autoComplete="off"
-  placeholder="you@company.com"
-  value={form.email}
-  onChange={e => setForm({ ...form, email: e.target.value })}
-/>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <input
-  className="form-input"
-  type="password"
-  name="new-password"
-  autoComplete="new-password"
-  placeholder={mode === "register" ? "Min. 8 characters" : "••••••••"}
-  value={form.password}
-  onChange={e => setForm({ ...form, password: e.target.value })}
-/>
-            </div>
-            {error && <p className="form-error">{error}</p>}
-            <button type="submit" className="btn btn-primary" disabled={loading}
-              style={{ width: "100%", justifyContent: "center" }}>
-              {loading ? (mode === "login" ? "Signing in…" : "Creating account…")
-                       : (mode === "login" ? "Sign In →" : "Create Free Account →")}
-            </button>
-          </form>
-
-          {mode === "login" && (
-            <p style={s.switchText}>
-              No account?{" "}
-              <button style={s.switchLink} onClick={() => setMode("register")}>
-                Create one free
-              </button>
-            </p>
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.nav className="ny-mobile-nav" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} aria-label="Mobile navigation">
+              <button type="button" onClick={() => scrollTo("overview")}>Overview</button>
+              <button type="button" onClick={() => scrollTo("workflow")}>How it works</button>
+              <button type="button" onClick={() => scrollTo("principle")}>Why ExitLens</button>
+              <button type="button" onClick={() => openAuth("register")}>Start free</button>
+            </motion.nav>
           )}
-        </div>
-      </div>
+        </AnimatePresence>
+      </header>
 
-      {/* How it works */}
-      <div style={s.howSection} id="how">
-        <h2 style={s.howTitle}>How it works</h2>
-        <div style={s.steps}>
-          {STEPS.map((step, i) => (
-            <div key={i} style={s.step}>
-              <div style={s.stepNum}>{i + 1}</div>
-              <div style={s.stepIcon}>{step.icon}</div>
-              <div style={s.stepTitle}>{step.title}</div>
-              <div style={s.stepDesc}>{step.desc}</div>
+      <main>
+        <section className="ny-hero" ref={heroRef} aria-labelledby="ny-title" onPointerMove={moveHeroLight}>
+          <div className="ny-hero-grid" aria-hidden="true" />
+          <div className="ny-pointer-glow" aria-hidden="true" />
+          <motion.div className="ny-hero-copy" style={{ y: heroY, opacity: heroOpacity }}>
+            <motion.div className="ny-liquid-glass ny-release" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+              <span>New</span><p>AI-powered session intelligence</p>
+            </motion.div>
+            <motion.h1 id="ny-title" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}>
+              Every exit.<br />One clear <em>reason.</em>
+            </motion.h1>
+            <motion.p className="ny-hero-subtitle" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}>
+              ExitLens tracks clicks, scrolls, and session behavior,<br />then explains what is blocking your conversions.
+            </motion.p>
+            <motion.button className="ny-primary ny-hero-cta" type="button" onClick={() => openAuth("register")} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.6, delay: 0.3 }}>Start tracking for free</motion.button>
+          </motion.div>
+
+          <motion.div className="ny-visual-area" id="overview" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}>
+            <video src={HERO_VIDEO} autoPlay muted loop playsInline preload="metadata" aria-hidden="true" />
+            <div className="ny-video-scrim" aria-hidden="true" />
+          </motion.div>
+          <div className="ny-hero-fade" aria-hidden="true" />
+        </section>
+
+        <section className="ny-proof-rail" aria-label="ExitLens product facts">
+          <div><strong>&lt; 3KB</strong><span>lightweight tracker</span></div>
+          <div><strong>Real-time</strong><span>behavior signals</span></div>
+          <div><strong>4 patterns</strong><span>detected automatically</span></div>
+          <div><strong>Plain English</strong><span>specific recommendations</span></div>
+        </section>
+
+        <section className="ny-principle" id="principle">
+          <div className="ny-principle-inner">
+            <motion.div className="ny-principle-heading" initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.4 }} transition={{ duration: .7 }}>
+              <p className="ny-kicker">Why ExitLens</p>
+              <h2>Analytics tells you <span>what happened.</span><br />ExitLens tells you <em>why.</em></h2>
+              <p>Turn visitor behavior into a clear explanation and a specific change your team can make next.</p>
+            </motion.div>
+            <div className="ny-answer-flow">
+              <motion.article initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: .6 }}>
+                <span>01 · What happened</span><strong>68% bounce rate</strong><p>Most mobile visitors leave before reaching the pricing action.</p>
+              </motion.article>
+              <motion.article initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: .6, delay: .1 }}>
+                <span>02 · Why it happened</span><strong>The call-to-action button appears too late</strong><p>Session paths consistently stop before the button appears on screen.</p>
+              </motion.article>
+              <motion.article className="ny-answer-action" initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: .6, delay: .2 }}>
+                <span>03 · What to change</span><strong>Move the main action button above 400px</strong><p>A precise recommendation, ready to test.</p>
+              </motion.article>
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+        </section>
+
+        <section className="ny-workflow" id="workflow">
+          <div className="ny-section-heading">
+            <p className="ny-kicker">From signal to action</p>
+            <h2>See the journey.<br /><em>Fix the break.</em></h2>
+            <p>Everything ExitLens captures is translated into a decision your team can act on.</p>
+          </div>
+          <div className="ny-workflow-grid">
+            {WORKFLOW.map((step, index) => (
+              <motion.article key={step.number} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} whileHover={{ y: -7 }} viewport={{ once: true, amount: 0.35 }} transition={{ duration: 0.65, delay: index * 0.08 }}>
+                <div><span>{step.number}</span><i /></div>
+                <h3>{step.title}</h3>
+                <p>{step.copy}</p>
+                {index === 0 && <div className="ny-mini-viz ny-capture-viz"><b>click</b><b>scroll 25%</b><b>exit</b></div>}
+                {index === 1 && <div className="ny-mini-viz ny-detect-viz"><span><i />rage click</span><span><i />dead click</span></div>}
+                {index === 2 && <div className="ny-mini-viz ny-explain-viz"><small>HIGH IMPACT</small><strong>The main action button appears too late.</strong><p>Move it above 400px.</p></div>}
+              </motion.article>
+            ))}
+          </div>
+        </section>
+
+        <section className="ny-final-cta">
+          <div className="ny-orb" aria-hidden="true" />
+          <p className="ny-kicker">Less guessing. More converting.</p>
+          <h2>Your next win is hidden<br />inside an <em>exit.</em></h2>
+          <p>Add one lightweight script and let ExitLens reveal what your landing page should change next.</p>
+          <motion.button className="ny-primary" type="button" onClick={() => openAuth("register")} whileHover={{ scale: 1.035 }} whileTap={{ scale: .98 }}>Get started for free <span>↗</span></motion.button>
+        </section>
+      </main>
+
+      <footer className="ny-footer">
+        <Brand />
+        <nav><a href="#overview">Overview</a><a href="#workflow">How it works</a><button type="button" onClick={() => openAuth("login")}>Sign in</button></nav>
+        <p>© {new Date().getFullYear()} ExitLens</p>
+      </footer>
+
+      <AnimatePresence>
+        {authOpen && (
+          <motion.div className="ny-auth-overlay" role="presentation" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={(event) => { if (event.target === event.currentTarget) setAuthOpen(false); }}>
+            <motion.section className="ny-auth-modal ny-liquid-glass" role="dialog" aria-modal="true" aria-labelledby="ny-auth-title" initial={{ opacity: 0, y: 20, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 15, scale: 0.98 }}>
+              <button className="ny-auth-close" type="button" aria-label="Close account form" onClick={() => setAuthOpen(false)}>×</button>
+              <Brand />
+              <div className="ny-auth-tabs" role="tablist" aria-label="Account access">
+                <button type="button" role="tab" aria-selected={mode === "login"} className={mode === "login" ? "active" : ""} onClick={() => switchAuthMode("login")}>Sign in</button>
+                <button type="button" role="tab" aria-selected={mode === "register"} className={mode === "register" ? "active" : ""} onClick={() => switchAuthMode("register")}>Create account</button>
+              </div>
+              <div className="ny-auth-heading"><p className="ny-kicker">ExitLens access</p><h2 id="ny-auth-title">{mode === "login" ? "Welcome back" : "Start tracking"}</h2><p>{mode === "login" ? "Sign in to your behavioral dashboard." : "Create your workspace in less than a minute."}</p></div>
+              <form className="ny-auth-form" onSubmit={handleSubmit}>
+                {mode === "register" && <label>Full name<input type="text" name="exitlens-full-name" autoComplete="off" placeholder="Enter your full name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required minLength={2} /></label>}
+                <label>Email<input type="email" name="exitlens-email" autoComplete="off" placeholder="Enter your email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required /></label>
+                <label>Password<input type="password" name="exitlens-password" autoComplete="new-password" placeholder={mode === "register" ? "Create a password (8+ characters)" : "Enter your password"} value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required minLength={mode === "register" ? 8 : undefined} /></label>
+                {error && <p className="ny-auth-error" role="alert">{error}</p>}
+                <button className="ny-primary ny-wide" type="submit" disabled={loading}>{loading ? (mode === "login" ? "Signing in..." : "Creating workspace...") : (mode === "login" ? "Open dashboard" : "Create free account")}</button>
+              </form>
+            </motion.section>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function Stat({ value, label }) {
-  return (
-    <div style={{ textAlign: "center" }}>
-      <div style={{ fontFamily: "var(--font-display)", fontSize: "1.3rem", fontWeight: 800, color: "var(--accent)" }}>
-        {value}
-      </div>
-      <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{label}</div>
-    </div>
-  );
+function BrandMark() {
+  return <span className="ny-brand-mark" aria-hidden="true"><i /><i /><i /></span>;
 }
 
-const FEATURES = [
-  { icon: "🖱️", title: "Click & Rage Click Tracking", desc: "See exactly where users click and when they get frustrated" },
-  { icon: "📜", title: "Scroll Depth Analysis", desc: "Know how far users read before giving up" },
-  { icon: "🤖", title: "AI-Powered Insights", desc: "Gemini AI explains behavior in plain English with specific fixes" },
-  { icon: "🔥", title: "Visual Heatmaps", desc: "See click concentration overlaid on your page layout" },
-  { icon: "⚡", title: "Pattern Detection", desc: "Bounces, dead clicks, low engagement — auto-detected" },
-  { icon: "📊", title: "Session Dashboard", desc: "Full analytics dashboard with exportable sessions" },
-];
-
-const STEPS = [
-  { icon: "📋", title: "Paste one script tag", desc: "Add our 3KB tracker to your landing page. No framework needed." },
-  { icon: "👁️", title: "We track behavior", desc: "Clicks, scrolls, session time and exit patterns collected automatically." },
-  { icon: "🤖", title: "AI analyzes sessions", desc: "Gemini AI identifies patterns and explains them in plain English." },
-  { icon: "🚀", title: "You fix and convert", desc: "Get specific recommendations. Implement. Watch conversions improve." },
-];
-
-const s = {
-  page: {
-  minHeight: "100vh",
-  background: "var(--bg)",
-  color: "var(--text)",
-  position: "relative",
-  overflow: "hidden",    
- fontFamily: "var(--font-body)",
-},
-  glowTop: {
-    position: "absolute", width: 700, height: 700,
-    borderRadius: "50%", top: -200, left: -100,
-    background: "radial-gradient(circle, rgba(91,127,255,0.08) 0%, transparent 70%)",
-    pointerEvents: "none",
-  },
-  glowBottom: {
-    position: "absolute", width: 500, height: 500,
-    borderRadius: "50%", bottom: -100, right: -100,
-    background: "radial-gradient(circle, rgba(91,127,255,0.06) 0%, transparent 70%)",
-    pointerEvents: "none",
-  },
-  nav: {
-    display: "flex", alignItems: "center", justifyContent: "space-between",
-    padding: "20px 40px", position: "relative", zIndex: 10,
-    borderBottom: "1px solid var(--border)",
-  },
-  navLogo: { display: "flex", alignItems: "center", gap: 10 },
-  dot: {
-    width: 10, height: 10, borderRadius: "50%",
-    background: "var(--accent)", boxShadow: "0 0 12px var(--accent)",
-    display: "inline-block",
-  },
-  logoText: {
-    fontFamily: "var(--font-display)", fontSize: "1.1rem",
-    fontWeight: 800, color: "var(--text)",
-  },
-  navLinks: { display: "flex", gap: 28 },
-  navLink: { color: "var(--text-muted)", fontSize: "0.9rem", textDecoration: "none", transition: "color 0.15s" },
-  grid: {
-    display: "grid", gridTemplateColumns: "1fr 420px",
-    gap: 60, padding: "60px 40px",
-    maxWidth: 1200, margin: "0 auto",
-    position: "relative", zIndex: 1,
-    alignItems: "start",
-  },
-  hero: {},
-  heroBadge: {
-    display: "inline-flex", alignItems: "center",
-    padding: "6px 14px", borderRadius: 100,
-    background: "var(--accent-glow)",
-    border: "1px solid rgba(91,127,255,0.3)",
-    color: "var(--accent)", fontSize: "0.8rem", fontWeight: 600,
-    marginBottom: 24,
-  },
-heroTitle: {
-  fontFamily: "var(--font-display)",
-  fontSize: "clamp(2rem, 4vw, 3rem)",
-  fontWeight: 800,
-  lineHeight: 1.2,
-  transform: "translateY(2px)",   // ✅ THIS fixes clipping
-  color: "var(--text)",
-  marginBottom: 20,
-},
-  heroAccent: {
-    color: "var(--accent)",
-    textShadow: "0 0 30px rgba(91,127,255,0.4)",
-  },
-  heroSubtitle: {
-    color: "var(--text-muted)", fontSize: "1.05rem",
-    lineHeight: 1.7, marginBottom: 32, maxWidth: 520,
-  },
-  statsRow: {
-    display: "flex", gap: 32, marginBottom: 36,
-    paddingBottom: 32, borderBottom: "1px solid var(--border)",
-  },
-  features: { display: "flex", flexDirection: "column", gap: 16 },
- featureItem: {
-  display: "flex",
-  gap: 14,
-  alignItems: "flex-start",
-  padding: "14px 16px",
-  background: "var(--bg-card)",
-  border: "1px solid var(--border)",
-  borderRadius: "var(--radius)",
-  transition: "background 0.2s ease, border-color 0.2s ease",
-},
-  featureIcon: { fontSize: "1.3rem", flexShrink: 0 },
-  featureTitle: { fontSize: "0.9rem", fontWeight: 600, color: "var(--text)", marginBottom: 2 },
-  featureDesc: { fontSize: "0.82rem", color: "var(--text-muted)", lineHeight: 1.5 },
-  authCard: {
-    background: "var(--bg-card)",
-    border: "1px solid var(--border)",
-    borderRadius: "var(--radius-lg)",
-    padding: "28px",
-    boxShadow: "var(--shadow)",
-    position: "sticky", top: 24,
-  },
-  tabs: {
-    display: "flex", gap: 0, marginBottom: 24,
-    background: "var(--bg)", borderRadius: "var(--radius)",
-    padding: 4,
-  },
-  tab: {
-    flex: 1, padding: "8px 16px", border: "none",
-    background: "transparent", color: "var(--text-muted)",
-    cursor: "pointer", borderRadius: 8,
-    fontSize: "0.88rem", fontWeight: 500,
-    fontFamily: "var(--font-body)",
-    transition: "all 0.15s",
-  },
-  tabActive: {
-    background: "var(--bg-card)",
-    color: "var(--text)",
-    boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
-  },
-  form: { display: "flex", flexDirection: "column", gap: 16 },
-  switchText: {
-    textAlign: "center", color: "var(--text-muted)",
-    fontSize: "0.85rem", marginTop: 16,
-  },
-  switchLink: {
-    background: "none", border: "none", color: "var(--accent)",
-    cursor: "pointer", fontSize: "0.85rem", padding: 0,
-    fontFamily: "var(--font-body)",
-  },
-  apiKeyCard: {
-    background: "var(--bg-card)", border: "1px solid var(--border)",
-    borderRadius: "var(--radius-lg)", padding: "40px",
-    maxWidth: 480, margin: "100px auto", textAlign: "center",
-  },
-  keyBox: {
-    background: "var(--bg)", border: "1px solid var(--border-soft)",
-    borderRadius: "var(--radius)", padding: "14px 16px",
-    wordBreak: "break-all", textAlign: "left",
-  },
-  keyText: { color: "var(--success)", fontSize: "0.8rem", fontFamily: "monospace" },
-  howSection: {
-    padding: "60px 40px",
-    borderTop: "1px solid var(--border)",
-    maxWidth: 1200, margin: "0 auto",
-  },
-  howTitle: {
-    fontFamily: "var(--font-display)", fontSize: "1.8rem",
-    textAlign: "center", marginBottom: 40, color: "var(--text)",
-  },
-  steps: {
-    display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: 20,
-  },
-  step: {
-    background: "var(--bg-card)", border: "1px solid var(--border)",
-    borderRadius: "var(--radius-lg)", padding: "24px",
-    textAlign: "center",
-  },
-  stepNum: {
-    width: 28, height: 28, borderRadius: "50%",
-    background: "var(--accent)", color: "#fff",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    fontFamily: "var(--font-display)", fontWeight: 800, fontSize: "0.85rem",
-    margin: "0 auto 12px",
-  },
-  stepIcon: { fontSize: "1.8rem", marginBottom: 12 },
-  stepTitle: { fontFamily: "var(--font-display)", fontWeight: 700, marginBottom: 8, color: "var(--text)" },
-  stepDesc: { fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.6 },
-};
+function Brand() {
+  return <span className="ny-brand"><BrandMark />ExitLens</span>;
+}
